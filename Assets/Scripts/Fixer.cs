@@ -6,10 +6,17 @@ using UnityEngine;
 public class Fixer : MonoBehaviour
 {
 
+    [SerializeField] private WaypointController roadPath;
+
+    [SerializeField] private int dragReturnRatio = 2;
     private float maxXAngle;
     private float originalDrag;
 
+    private float targetDrag;
+
     private Rigidbody rb;
+
+    
 
 
 
@@ -20,6 +27,7 @@ public class Fixer : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         maxXAngle = GetComponentInChildren<KickBikeController>().GetMaxSteeringAngle();
         originalDrag = rb.drag;
+        targetDrag = originalDrag;
     }
 
     private void FixedUpdate()
@@ -28,19 +36,21 @@ public class Fixer : MonoBehaviour
         transform.localEulerAngles = new Vector3(
             ClampAngle(transform.localEulerAngles.x, -maxXAngle, maxXAngle), 
         transform.localEulerAngles.y, 0);
-        CheckOffTheRoad();
+        FixDrag();      
+    }
 
+    private void FixDrag()
+    {
+        rb.drag = Mathf.Lerp(rb.drag, targetDrag, Time.deltaTime * dragReturnRatio);
 
-      
     }
 
     private void CheckOffTheRoad()
     {
         var rayStart = transform.position;
-        var hits = Physics.SphereCastAll(rayStart, 3f, Vector3.down);
+        var hits = Physics.SphereCastAll(rayStart, 1f, Vector3.down);
         foreach (var hit in hits)
-        {
-        
+        {        
         }
 
     }
@@ -62,12 +72,12 @@ public class Fixer : MonoBehaviour
     {
         if (slowDown)
         {
-            rb.drag = originalDrag * dragRatio;
+            targetDrag = originalDrag * dragRatio;
 
         }
         else
         {
-            rb.drag = originalDrag;
+            targetDrag = originalDrag;
         }
     }
 

@@ -2,7 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 using Cinemachine;
+using System;
 
 public class PlayerController : IActivator, IKickable
 {
@@ -17,11 +19,10 @@ public class PlayerController : IActivator, IKickable
 
     [SerializeField][Range(0, 3)] private float turningAccelerationSpeed = 3;
 
-    [SerializeField][Range(1, 5)] private int kickAccelerationTime = 5;
+    [SerializeField][Range(0, 3)] private float kickAccelerationTime = 5;
 
-    [SerializeField] private CinemachineVirtualCamera virtualCamera;
+    [SerializeField] private Slider slider;
 
-    private float maxKickPower = 3;
 
     private KickBikeController kickBikeController;
 
@@ -32,6 +33,7 @@ public class PlayerController : IActivator, IKickable
     private Transform steeringAxleTransform;
 
     private float currentHorizontalValue = 0;
+
 
 
 
@@ -80,6 +82,7 @@ public class PlayerController : IActivator, IKickable
     private void Awake()
     {
         kickBikeController = transform.GetComponentInChildren<KickBikeController>();
+        UpgradePowerAndSlider(0);
 
     }
     void Start()
@@ -95,35 +98,44 @@ public class PlayerController : IActivator, IKickable
     private void FixedUpdate()
     {
 
-
-        var axisValue = turnAction.ReadValue<float>();
         if (powering)
         {
-
-            currentPower += Time.deltaTime * kickAccelerationTime;
-            currentPower = Mathf.Clamp(currentPower, 0, maxKickPower);
+            UpgradePower();
         }
+        var axisValue = turnAction.ReadValue<float>();
+
         var turningSpeed = Time.deltaTime * turningAccelerationSpeed;
 
 
-        if (axisValue == 1)
+        if (axisValue == 1 || axisValue == -1)
         {
-            currentHorizontalValue = Mathf.Lerp(currentHorizontalValue, axisValue, turningSpeed);
-        }
-        else if (axisValue == -1)
-        {
-            currentHorizontalValue = Mathf.Lerp(currentHorizontalValue, axisValue, turningSpeed);
+            UpgradeHorizontalValue(axisValue, turningSpeed);
         }
         else
         {
             currentHorizontalValue = Mathf.Lerp(currentHorizontalValue, 0, Time.deltaTime * 10);
-
         }
+
 
 
         kickBikeController.Steer(currentHorizontalValue);
 
     }
+
+    private void UpgradeHorizontalValue(float axisValue, float turningSpeed)
+    {
+        currentHorizontalValue = Mathf.Lerp(currentHorizontalValue, axisValue, turningSpeed);
+
+    }
+
+    private void UpgradePower()
+    {
+        currentPower += Time.deltaTime * kickAccelerationTime;
+        currentPower = Mathf.Clamp01(currentPower);
+        slider.value = currentPower;
+    }
+
+
 
     private void LateUpdate()
     {
@@ -187,6 +199,7 @@ public class PlayerController : IActivator, IKickable
     public void OnKick()
     {
         kickBikeController.Boost(currentPower);
+        currentPower = 0;
     }
 
     public void OnReverse()
@@ -203,19 +216,25 @@ public class PlayerController : IActivator, IKickable
 
     void OnAccelerate(InputAction.CallbackContext context)
     {
-        if (context.phase == InputActionPhase.Started)
+        if (context.phase == InputActionPhase.Started || context.phase == InputActionPhase.Performed)
         {
             powering = true;
-            currentPower = 0;
         }
+
         if (context.phase == InputActionPhase.Canceled)
         {
             powering = false;
+            slider.value = 0;
             kickingAnimator.SetTrigger("Kicking");
         }
 
     }
 
+    private void UpgradePowerAndSlider(float powerValue)
+    {
+        this.currentPower = powerValue;
+        slider.value = powerValue;
+    }
 
     void OnGoBack(InputAction.CallbackContext context)
     {

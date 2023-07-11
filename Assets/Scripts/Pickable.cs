@@ -19,7 +19,6 @@ public class Pickable : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
 
-        Debug.Log("joojoo");
         var particleSystem = Instantiate(pickedEffect, transform.position, pickedEffect.transform.localRotation);
         particleSystem.Play();
         if (pickableSound != null)

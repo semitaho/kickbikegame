@@ -22,6 +22,13 @@ public class WaypointController : MonoBehaviour
 
     }
 
+    public Vector3 GetCurrentWaypointLine() {
+        var current =GetCurrentWaypoint().transform;
+        var previoutWaypointIndex = currentWaypointIndex == 0 ? transform.childCount - 1 : currentWaypointIndex - 1;
+        var previous = transform.GetChild(previoutWaypointIndex).transform;
+        return current.position - previous.position;
+    }
+
     public Transform GetCurrentWaypoint()
     {
         return transform.GetChild(currentWaypointIndex);
@@ -42,13 +49,14 @@ public class WaypointController : MonoBehaviour
         
         Gizmos.color = Color.yellow;
 
-        var currentPoint = transform.position + Vector3.left * Distance;
+        var currentPoint = transform.position;
         var countOfChildren = transform.childCount;
         for (var index = 0; index < countOfChildren; index++)
         {
             var childTransform = transform.GetChild(index);
-            DrawLine(Color.yellow, currentPoint, childTransform.position+ Vector3.left * Distance);
-            currentPoint = childTransform.position +  Vector3.left * Distance;
+            DrawLine(Color.yellow, currentPoint, childTransform.position);
+            currentPoint = childTransform.position;
+            var moveVector = Maths.CalculateMoveVector(currentPoint, childTransform.position);
             Gizmos.color = Color.blue;
             Gizmos.DrawSphere(currentPoint, 0.4f);
         }

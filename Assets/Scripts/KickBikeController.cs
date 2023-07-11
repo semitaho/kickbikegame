@@ -11,16 +11,18 @@ public class KickBikeController : MonoBehaviour
 
     [SerializeField] private float maxSteeringAngle = 60f;
 
-    [SerializeField] private float brakeForce = 10f;
-
-    [SerializeField] private float revertTorque = 2000f;
-
+    [SerializeField] private float slowdownRate = 10f;
 
     [SerializeField] List<AxleInfo> axleInfos;
 
-    private float currentMotorTorque = 0f;
+    [SerializeField] private float maxBoostTime = 2f;
 
-    private float currentRevertTorque = 0f;
+
+    private float originalMotorTorque;
+
+
+    private bool boosting = false;
+    private float currentBoostTime = 0f;
 
 
     private Fixer fixer;
@@ -36,45 +38,58 @@ public class KickBikeController : MonoBehaviour
 
     public void Boost(float motorBoost)
     {
+        boosting = true;
+
         foreach (var axleInfo in axleInfos)
         {
 
             float motor = motorBoost * maxMotorTorque;
             if (axleInfo.motor)
             {
-                currentMotorTorque = motor;
+                originalMotorTorque = axleInfo.wheel.motorTorque;
+                axleInfo.wheel.motorTorque += motor;
+                //currentMotorTorque = motor;
 
             }
         }
+        currentBoostTime = 0;
     }
 
     public void Revert()
     {
-        currentMotorTorque = 0;
-        foreach (var axleInfo in axleInfos)
-        {
-            if (axleInfo.motor)
-            {
-                currentRevertTorque = revertTorque;
-
-            }
-        }
+        Boost(-0.1f);
     }
 
     // Update is called once per frame
     void FixedUpdate()
     {
+        if (boosting)
+        {
+            currentBoostTime += Time.deltaTime;
+            if (currentBoostTime >= maxBoostTime)
+            {
+                StopBoosting();
+            }
+        }
+        foreach (var axleInfo in axleInfos)
+        {
+            Debug.Log("motor torque: " + axleInfo.wheel.motorTorque);
+            CheckGroundColliders(axleInfo);
+        }
+    }
+
+    private void StopBoosting()
+    {
         foreach (var axleInfo in axleInfos)
         {
             if (axleInfo.motor)
             {
-                currentMotorTorque -= (Time.deltaTime * brakeForce);
-                currentRevertTorque -= (Time.deltaTime * brakeForce);
-                axleInfo.wheel.motorTorque = MathF.Max(0, currentMotorTorque) - MathF.Max(0, currentRevertTorque);
+                float currentTorque = axleInfo.wheel.motorTorque;
+                float newTorque = Mathf.Lerp(currentTorque, 0f, slowdownRate * Time.deltaTime); // Reduce torque gradually
+                axleInfo.wheel.motorTorque = newTorque; //originalMotorTorque; // currentMotorTorque; //MathF.Max(0, currentMotorTorque) - MathF.Max(0, currentRevertTorque);
                 ApplyLocalPositionToVisuals(axleInfo.wheel);
 
             }
-            CheckGroundColliders(axleInfo);
         }
     }
 
@@ -85,6 +100,7 @@ public class KickBikeController : MonoBehaviour
         {
             if (CheckSlowdownCollider(hit)) return;
             if (CheckRampCollider(hit)) return;
+            if (CheckRataalue(hit)) return;
         }
 
     }
@@ -116,7 +132,18 @@ public class KickBikeController : MonoBehaviour
 
         fixer.ToggleSlowDown(0f, false);
         return false;
+    }
 
+    private bool CheckRataalue(WheelHit hit)
+    {
+        if (hit.collider.CompareTag("Terrain"))
+        {
+            fixer.ToggleSlowDown(2f, true);
+            return true;
+        }
+
+        fixer.ToggleSlowDown(0f, false);
+        return false;
     }
 
     public void ApplyLocalPositionToVisuals(WheelCollider collider)
