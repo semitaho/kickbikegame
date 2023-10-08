@@ -65,6 +65,7 @@ public class Spawner : IActivator
 
     public void ChaChaSpawn()
     {
+        
         Instantiate(spawnPrefab,
        new Vector3(playerPrefab.position.x, playerPrefab.position.y + 2, playerPrefab.position.z),
         Quaternion.identity);

@@ -1,15 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 
 
-public class LapCounter : MonoBehaviour
+public class LapCounter : Checkpoint
 {
-
-    [SerializeField] private Text counter;
-
-    [SerializeField] private int maxFlickerLapLoopCount = 5;
 
     private int currentLap;
     // Start is called before the first frame update
@@ -28,7 +23,6 @@ public class LapCounter : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            Debug.Log("one lap triggered!");
             currentLap += 1;
             RefreshNewLap();
         }
@@ -38,6 +32,7 @@ public class LapCounter : MonoBehaviour
     private void RefreshNewLap()
     {
         var text = string.Format("Lap {0}", currentLap);
-        counter.GetComponent<StartCounter>().TriggerFlicker(text, maxFlickerLapLoopCount);
+         CheckpointTriggered(text);
+
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using UnityEditor;
 using Cinemachine;
 using System;
 
@@ -14,15 +15,19 @@ public class PlayerController : IActivator, IKickable
 
     [SerializeField] private InputAction goBackAction;
 
+    [SerializeField] private InputAction quitGameAction;
+
+
     [SerializeField] private Transform hipsTransform;
 
+    [SerializeField] private WaypointController roadPath;
 
-    [SerializeField][Range(0, 3)] private float turningAccelerationSpeed = 3;
+
+    [SerializeField][Range(0, 10)] private float turningAccelerationSpeed = 3;
 
     [SerializeField][Range(0, 3)] private float kickAccelerationTime = 5;
 
     [SerializeField] private Slider slider;
-
 
     private KickBikeController kickBikeController;
 
@@ -33,9 +38,6 @@ public class PlayerController : IActivator, IKickable
     private Transform steeringAxleTransform;
 
     private float currentHorizontalValue = 0;
-
-
-
 
 
     bool powering = false;
@@ -50,6 +52,7 @@ public class PlayerController : IActivator, IKickable
         goBackAction.started += OnGoBack;
         goBackAction.performed += OnGoBack;
         goBackAction.canceled += OnGoBack;
+        quitGameAction.performed += OnQuit;
 
     }
 
@@ -58,13 +61,16 @@ public class PlayerController : IActivator, IKickable
         accelerateAction.Enable();
         goBackAction.Enable();
         turnAction.Enable();
+        quitGameAction.Enable();
     }
 
     private void DisableInputActions()
     {
+    
         accelerateAction.Disable();
         goBackAction.Disable();
         turnAction.Disable();
+        quitGameAction.Disable();
     }
 
     private void OnDisable()
@@ -97,19 +103,16 @@ public class PlayerController : IActivator, IKickable
 
     private void FixedUpdate()
     {
-
         if (powering)
         {
             UpgradePower();
         }
+
+
         var axisValue = turnAction.ReadValue<float>();
-
-        var turningSpeed = Time.deltaTime * turningAccelerationSpeed;
-
-
         if (axisValue == 1 || axisValue == -1)
         {
-            UpgradeHorizontalValue(axisValue, turningSpeed);
+            UpgradeHorizontalValue(axisValue);
         }
         else
         {
@@ -117,16 +120,16 @@ public class PlayerController : IActivator, IKickable
         }
 
 
-
         kickBikeController.Steer(currentHorizontalValue);
 
     }
 
-    private void UpgradeHorizontalValue(float axisValue, float turningSpeed)
+    private void UpgradeHorizontalValue(float axisValue)
     {
-        currentHorizontalValue = Mathf.Lerp(currentHorizontalValue, axisValue, turningSpeed);
+        currentHorizontalValue = Mathf.Lerp(currentHorizontalValue, axisValue, turningAccelerationSpeed * Time.deltaTime);
 
     }
+
 
     private void UpgradePower()
     {
@@ -143,11 +146,19 @@ public class PlayerController : IActivator, IKickable
 
     }
 
-
     private void OnTriggerEnter(Collider other)
     {
+        CheckWaypointCollision(other);
         if (CheckPickableCollision(other)) return;
         if (CheckBombCollision(other)) return;
+    }
+
+    private void CheckWaypointCollision(Collider other)
+    {
+        if (other.gameObject.tag == "Waypoint")
+        {
+            roadPath.ChangeWaypoint();
+        }
     }
 
     private bool CheckPickableCollision(Collider other)
@@ -178,9 +189,7 @@ public class PlayerController : IActivator, IKickable
         playerAnimator.enabled = false;
         kickingAnimator.enabled = true;
         EnableInputActions();
-        //transform.localEulerAngles = new Vector3( transform.localEulerAngles.x,-maxXAngle, maxXAngle), transform.localEulerAngles.y, 0);
 
-        //virtualCamera.Follow = transform;
     }
 
     private void Steer(float horizontalValue)
@@ -192,19 +201,21 @@ public class PlayerController : IActivator, IKickable
     private void Rotate(Transform transform, float horizontalValue)
     {
         var steeringAngle = kickBikeController.GetMaxSteeringAngle();
+
         transform.RotateAround(steeringAxleTransform.position, Vector3.up, steeringAngle * horizontalValue);
+
+
 
     }
 
     public void OnKick()
     {
         kickBikeController.Boost(currentPower);
-        currentPower = 0;
+     //   UpgradePowerAndSlider(0);
     }
 
     public void OnReverse()
     {
-        Debug.Log("potku taakse!");
         kickBikeController.Revert();
     }
 
@@ -224,7 +235,6 @@ public class PlayerController : IActivator, IKickable
         if (context.phase == InputActionPhase.Canceled)
         {
             powering = false;
-            slider.value = 0;
             kickingAnimator.SetTrigger("Kicking");
         }
 
@@ -239,6 +249,13 @@ public class PlayerController : IActivator, IKickable
     void OnGoBack(InputAction.CallbackContext context)
     {
         kickingAnimator.SetTrigger("Reversing");
+    }
+
+    void OnQuit(InputAction.CallbackContext context)
+    {
+
+        Debug.Log("QUIRRING..");
+        Application.Quit();
     }
 
 }

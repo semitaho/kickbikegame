@@ -20,12 +20,18 @@ public class KickBikeController : MonoBehaviour
 
     private float originalMotorTorque;
 
+    private readonly float   maxspeed = 20f;
+
 
     private bool boosting = false;
     private float currentBoostTime = 0f;
 
+    private Rigidbody playerRigidbody;
+
 
     private Fixer fixer;
+
+
 
 
 
@@ -33,6 +39,7 @@ public class KickBikeController : MonoBehaviour
     void Start()
     {
         fixer = GetComponentInParent<Fixer>();
+        playerRigidbody = GetComponentInParent<Rigidbody>();
 
     }
 
@@ -47,9 +54,7 @@ public class KickBikeController : MonoBehaviour
             if (axleInfo.motor)
             {
                 originalMotorTorque = axleInfo.wheel.motorTorque;
-                axleInfo.wheel.motorTorque += motor;
-                //currentMotorTorque = motor;
-
+                axleInfo.wheel.motorTorque = motor;
             }
         }
         currentBoostTime = 0;
@@ -57,6 +62,17 @@ public class KickBikeController : MonoBehaviour
 
     public void Revert()
     {
+        foreach (var axleInfo in axleInfos)
+        {
+
+            if (axleInfo.motor)
+            {
+
+                axleInfo.wheel.motorTorque = 0;
+                //currentMotorTorque = motor;
+
+            }
+        }
         Boost(-0.1f);
     }
 
@@ -73,7 +89,6 @@ public class KickBikeController : MonoBehaviour
         }
         foreach (var axleInfo in axleInfos)
         {
-            Debug.Log("motor torque: " + axleInfo.wheel.motorTorque);
             CheckGroundColliders(axleInfo);
         }
     }
@@ -87,6 +102,10 @@ public class KickBikeController : MonoBehaviour
                 float currentTorque = axleInfo.wheel.motorTorque;
                 float newTorque = Mathf.Lerp(currentTorque, 0f, slowdownRate * Time.deltaTime); // Reduce torque gradually
                 axleInfo.wheel.motorTorque = newTorque; //originalMotorTorque; // currentMotorTorque; //MathF.Max(0, currentMotorTorque) - MathF.Max(0, currentRevertTorque);
+                if (Mathf.Abs(axleInfo.wheel.motorTorque) < 0.05)
+                {
+                    axleInfo.wheel.motorTorque = 0;
+                }
                 ApplyLocalPositionToVisuals(axleInfo.wheel);
 
             }
@@ -165,35 +184,25 @@ public class KickBikeController : MonoBehaviour
 
     public void Steer(float currentHorizontalValue)
     {
+
         var childTransform = transform.GetChild(0);
         foreach (var axleInfo in axleInfos)
         {
             if (axleInfo.steeringObject != null)
             {
+                var steeringSpeedFactor = GetSteeringSpeedFactor();
 
-                var endAngle = currentHorizontalValue * maxSteeringAngle;
+                var endAngle = currentHorizontalValue * maxSteeringAngle * steeringSpeedFactor; //* inversed;
                 axleInfo.steeringObject.localEulerAngles = new Vector3(0, endAngle, 0);
                 axleInfo.wheel.steerAngle = endAngle;
 
             }
         }
     }
-
-
-    public void SteerWithAngle(float angleValue)
+    private float GetSteeringSpeedFactor()
     {
-        var childTransform = transform.GetChild(0);
-        foreach (var axleInfo in axleInfos)
-        {
-            if (axleInfo.steeringObject != null)
-            {
-
-                var normalizedAngle = angleValue - maxSteeringAngle * Mathf.Floor((maxSteeringAngle + 180f) / maxSteeringAngle);
-                axleInfo.steeringObject.localEulerAngles = new Vector3(0, normalizedAngle, 0);
-                axleInfo.wheel.steerAngle = normalizedAngle;
-
-            }
-        }
+        var clampedValue = Mathf.Clamp( playerRigidbody.velocity.magnitude / maxspeed, 0.2f, 0.8f);
+        return 1- clampedValue;
     }
 
 

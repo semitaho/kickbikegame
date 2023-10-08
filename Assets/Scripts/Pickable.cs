@@ -10,6 +10,7 @@ public class Pickable : MonoBehaviour
 
     [SerializeField] private AudioClip pickableSound;
 
+
     // Start is called before the first frame update
     void Start()
     {

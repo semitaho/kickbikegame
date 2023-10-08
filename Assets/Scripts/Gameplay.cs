@@ -3,11 +3,13 @@ using UnityEngine;
 using UnityEngine.Events;
 using TMPro;
 using UnityEngine.Playables;
+using UnityEngine.SceneManagement;
 public class Gameplay : IActivator
 {
 
-    private float timeInSecondsLeft;
 
+
+    private float timeInSecondsLeft;
 
     [SerializeField] private ParticleSystem particles;
 
@@ -15,40 +17,77 @@ public class Gameplay : IActivator
 
     [SerializeField] private GameObject rock;
 
-    [SerializeField] private float distanceFromPlayerToDropRock = 5f;
+    [SerializeField] private StartCounter notifyText;
 
-    [SerializeField] private float heightFromPlayerToDropRock = 10f;
+    [SerializeField] private GameObject uiMenu;
+
+    private CheckpointManager checkpointManager;
+
 
     private PlayableDirector director;
 
-    [SerializeField] TextMeshProUGUI timerText;
 
+
+    public static Gameplay instance { get; private set; }
+
+
+    public void CheckpointTriggered(string text)
+    {
+        notifyText.TriggerFlicker(text, 3);
+        checkpointManager.CheckpointTriggered();
+
+    }
+
+    public void TriggerGameOver()
+    {
+        notifyText.TriggerFlicker("GAME OVER!", 5);
+        IActivator[] activators = FindObjectsOfType<IActivator>();
+        foreach (var activator in activators)
+        {
+            activator.enabled = false;
+        }
+        Invoke("ActivateUiMenu", 3);
+    }
+
+    private void ActivateUiMenu()
+    {
+        uiMenu.SetActive(true);
+    }
+
+
+    public void RestartGame()
+    {
+        Debug.Log("RESTARTING SCENE!");
+        Destroy(gameObject);
+        instance = null;
+
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
     private void Awake()
     {
         director = GetComponent<PlayableDirector>();
-    }
-    // Start is called before the first frame update
-    void Start()
-    {
-       // refreshTimerText();
-        timerText.text = director.time.ToString();
+
+        checkpointManager = GetComponent<CheckpointManager>();
+
+        if (instance != null && instance != this)
+        {
+            Destroy(this);
+        }
+        else
+        {
+            DontDestroyOnLoad(this);
+            instance = this;
+        }
 
     }
+    // Start is called before the first frame update
+
 
     private void Update()
     {
-        //director.
-        //timeInSecondsLeft -= Time.smoothDeltaTime;
-        refreshTimerText();
-
+    
     }
 
-    private void refreshTimerText()
-    {
-        var timespan = TimeSpan.FromSeconds(timeInSecondsLeft);
-        string str = timespan.ToString(@"mm\:ss");
-        timerText.text = str;
-    }
 
 
     public void PlayChaChaParticles()
@@ -59,11 +98,6 @@ public class Gameplay : IActivator
         Destroy(particlesForPlay, 3.0f);
     }
 
-    void PlaySpawners()
-    {
-        //Vector3.MoveTowards(position, Vector3.forward * 3)
-        Instantiate(rock, player.transform.position + (player.transform.forward * distanceFromPlayerToDropRock) + (Vector3.up * heightFromPlayerToDropRock), player.transform.localRotation);
-    }
 
     // Update is called once per frame
 

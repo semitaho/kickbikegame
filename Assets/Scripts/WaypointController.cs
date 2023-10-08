@@ -22,11 +22,12 @@ public class WaypointController : MonoBehaviour
 
     }
 
-    public Vector3 GetCurrentWaypointLine() {
-        var current =GetCurrentWaypoint().transform;
+    public Vector3 GetCurrentWaypointLine(float y)
+    {
+        var current = GetCurrentWaypoint().transform;
         var previoutWaypointIndex = currentWaypointIndex == 0 ? transform.childCount - 1 : currentWaypointIndex - 1;
         var previous = transform.GetChild(previoutWaypointIndex).transform;
-        return current.position - previous.position;
+        return new Vector3(current.position.x, y, current.position.z) - new Vector3(previous.position.x, y, previous.position.z);
     }
 
     public Transform GetCurrentWaypoint()
@@ -34,19 +35,31 @@ public class WaypointController : MonoBehaviour
         return transform.GetChild(currentWaypointIndex);
     }
 
+    public Transform GetPreviousWaypoint()
+    {
+        var previoutWaypointIndex = currentWaypointIndex == 0 ? transform.childCount - 1 : currentWaypointIndex - 1;
+        return transform.GetChild(previoutWaypointIndex);
+
+    }
+
+    public Quaternion GetCurrentWaypointRotation()
+    {
+        return transform.GetChild(currentWaypointIndex).localRotation;
+    }
+
     private void OnDrawGizmos()
     {
 
-            Draw(0);
+        Draw(0);
         //    Draw(maxDistanceFromCenter);
 
 
     }
 
     private void Draw(float Distance)
-     {
+    {
 
-        
+
         Gizmos.color = Color.yellow;
 
         var currentPoint = transform.position;

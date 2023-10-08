@@ -29,7 +29,6 @@ public class Tracks : MonoBehaviour
             if (ShowTrack(hit))
 
             {
-                Debug.Log("collide with road!");
                 trailRenderer.emitting = true;
             }
             else

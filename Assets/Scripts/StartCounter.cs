@@ -78,7 +78,6 @@ public class StartCounter : MonoBehaviour
         this.currentLoop += 1;
         if (this.currentLoop >= this.maxAmountOfLoops)
         {
-            Debug.Log("On loop end...");
             this.counter.text = "";
         }
         else 

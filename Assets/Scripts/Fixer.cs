@@ -6,8 +6,6 @@ using UnityEngine;
 public class Fixer : MonoBehaviour
 {
 
-    [SerializeField] private WaypointController roadPath;
-
     [SerializeField] private int dragReturnRatio = 2;
     private float maxXAngle;
     private float originalDrag;
