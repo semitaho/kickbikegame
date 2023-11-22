@@ -9,14 +9,9 @@ public class PlayerAnimationEventReceiver : MonoBehaviour
 
     void OnKick()
     {
-        GetComponentInParent<IKickable>().OnKick();
     }
 
-    void OnKickEnded()
-    {
-        GetComponentInParent<IKickable>().OnKickEnded();
-    }
-
+   
     void OnReverse()
     {
         GetComponentInParent<IKickable>().OnReverse();

@@ -9,6 +9,13 @@ using System;
 
 public class PlayerController : IActivator, IKickable
 {
+
+    enum MovingState
+    {
+        Idling,
+        Accelerating,
+        Breaking
+    }
     [SerializeField] private InputAction accelerateAction;
 
     [SerializeField] private InputAction turnAction;
@@ -25,22 +32,28 @@ public class PlayerController : IActivator, IKickable
 
     [SerializeField][Range(0, 10)] private float turningAccelerationSpeed = 3;
 
-    [SerializeField][Range(0, 3)] private float kickAccelerationTime = 5;
+    [SerializeField][Range(0, 1)] private float kickAccelerationTime = 5;
 
     [SerializeField] private Slider slider;
 
+    [SerializeField] private float slownessSpeed = 0.5f;
+
     private KickBikeController kickBikeController;
+
+    private float maxPower = 2f;
 
     private Animator kickingAnimator;
     private Animator playerAnimator;
+
+    private Rigidbody rb;
 
 
     private Transform steeringAxleTransform;
 
     private float currentHorizontalValue = 0;
 
+    private MovingState movingState = MovingState.Idling;
 
-    bool powering = false;
 
     float currentPower = 0;
     private void OnEnable()
@@ -66,7 +79,7 @@ public class PlayerController : IActivator, IKickable
 
     private void DisableInputActions()
     {
-    
+
         accelerateAction.Disable();
         goBackAction.Disable();
         turnAction.Disable();
@@ -88,6 +101,7 @@ public class PlayerController : IActivator, IKickable
     private void Awake()
     {
         kickBikeController = transform.GetComponentInChildren<KickBikeController>();
+        rb = GetComponent<Rigidbody>();
         UpgradePowerAndSlider(0);
 
     }
@@ -101,12 +115,43 @@ public class PlayerController : IActivator, IKickable
 
     }
 
+    static float ScaleClamp(float value, float fromMin, float fromMax, float toMin, float toMax)
+    {
+        // Ensure the value is within the original range
+        float clampedValue = Mathf.Clamp(value, fromMin, fromMax);
+
+        // Calculate the normalized value within the original range
+        float normalizedValue = (clampedValue - fromMin) / (fromMax - fromMin);
+
+        // Scale the normalized value to the target range
+        float scaledValue = normalizedValue * (toMax - toMin) + toMin;
+
+        // Ensure the result is within the target range
+        return Mathf.Clamp(scaledValue, toMin, toMax);
+    }
+    private void Update()
+    {
+        switch (movingState)
+        {
+            case MovingState.Accelerating:
+                currentPower += Time.deltaTime * kickAccelerationTime;
+                currentPower = Mathf.Clamp(currentPower, 0, maxPower);
+                break;
+            case MovingState.Breaking:
+                currentPower -= Time.deltaTime * kickAccelerationTime;
+                currentPower = Mathf.Max(currentPower, -1);
+                break;
+            default:
+                break;
+        }
+
+        var scaled = ScaleClamp(rb.velocity.sqrMagnitude, 0.01f, 30f, 0.5f, 1.5f);
+        Debug.Log("rb: " + scaled);
+        UpgradePower(scaled);
+    }
+
     private void FixedUpdate()
     {
-        if (powering)
-        {
-            UpgradePower();
-        }
 
 
         var axisValue = turnAction.ReadValue<float>();
@@ -131,11 +176,13 @@ public class PlayerController : IActivator, IKickable
     }
 
 
-    private void UpgradePower()
+    private void UpgradePower(float multiplier)
     {
-        currentPower += Time.deltaTime * kickAccelerationTime;
-        currentPower = Mathf.Clamp01(currentPower);
+
         slider.value = currentPower;
+        kickingAnimator.speed = 1 * multiplier;
+        //kickingAnimator.SetFloat("Speeding", multiplier);
+        kickBikeController.Boost(currentPower);
     }
 
 
@@ -208,36 +255,46 @@ public class PlayerController : IActivator, IKickable
 
     }
 
-    public void OnKick()
-    {
-        kickBikeController.Boost(currentPower);
-     //   UpgradePowerAndSlider(0);
-    }
-
     public void OnReverse()
     {
         kickBikeController.Revert();
     }
 
-    public void OnKickEnded()
-    {
-
-    }
 
 
     void OnAccelerate(InputAction.CallbackContext context)
     {
-        if (context.phase == InputActionPhase.Started || context.phase == InputActionPhase.Performed)
+        if (context.phase == InputActionPhase.Started)
         {
-            powering = true;
+            kickingAnimator.SetTrigger("Kicking");
+            kickingAnimator.SetBool("Mirroring", false);
+            movingState = MovingState.Accelerating;
         }
 
         if (context.phase == InputActionPhase.Canceled)
         {
-            powering = false;
-            kickingAnimator.SetTrigger("Kicking");
+            kickingAnimator.SetTrigger("BackToIdle");
+            movingState = MovingState.Idling;
         }
 
+    }
+
+    void OnGoBack(InputAction.CallbackContext context)
+    {
+
+        if (context.phase == InputActionPhase.Started)
+        {
+            kickingAnimator.SetTrigger("Kicking");
+            kickingAnimator.SetBool("Mirroring", false);
+            movingState = MovingState.Breaking;
+        }
+
+        if (context.phase == InputActionPhase.Canceled)
+        {
+            kickingAnimator.SetTrigger("BackToIdle");
+
+            movingState = MovingState.Idling;
+        }
     }
 
     private void UpgradePowerAndSlider(float powerValue)
@@ -246,10 +303,7 @@ public class PlayerController : IActivator, IKickable
         slider.value = powerValue;
     }
 
-    void OnGoBack(InputAction.CallbackContext context)
-    {
-        kickingAnimator.SetTrigger("Reversing");
-    }
+
 
     void OnQuit(InputAction.CallbackContext context)
     {
